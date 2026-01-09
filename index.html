@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Plumbing Job Helper</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#0b5fff" />
+  <style>
+    :root { font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background:#0b1220; color:#e8eefc; }
+    header { padding: 16px; background:#0b5fff; }
+    header h1 { margin:0; font-size: 18px; }
+    main { padding: 14px; max-width: 900px; margin: 0 auto; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    .card {
+      background:#121a2b; border:1px solid #1f2a44; border-radius:14px;
+      padding:14px; margin: 10px 0;
+    }
+    input, select, textarea, button {
+      width: 100%; padding: 10px; border-radius: 10px;
+      border: 1px solid #2b3a61; background:#0b1220; color:#e8eefc;
+      box-sizing: border-box;
+    }
+    textarea { min-height: 80px; }
+    button { background:#0b5fff; border:none; font-weight:600; }
+    button.secondary { background:#24314f; }
+    button.danger { background:#c0392b; }
+    .col { flex:1; min-width: 220px; }
+    .muted { color:#a8b3d6; font-size: 12px; }
+    .list { display:flex; flex-direction:column; gap:8px; }
+    .item { display:flex; gap:8px; align-items:center; }
+    .item > * { flex: 1; }
+    .item .qty { max-width: 90px; }
+    .tabs { display:flex; gap:10px; margin: 10px 0 14px; flex-wrap:wrap; }
+    .tab { padding:10px 12px; border-radius: 12px; background:#24314f; cursor:pointer; user-select:none; }
+    .tab.active { background:#0b5fff; }
+    .jobline { display:flex; gap:10px; align-items:center; justify-content:space-between; }
+    .jobline .left { flex:1; }
+    .pill { font-size:12px; padding:4px 10px; border-radius: 999px; background:#24314f; }
+    .pill.done { background:#1f7a3f; }
+    .pill.open { background:#8a6d1d; }
+    .small { font-size: 13px; }
+    .actions { display:flex; gap:8px; flex-wrap:wrap; }
+    .actions button { width:auto; }
+    .hr { height:1px; background:#1f2a44; margin:12px 0; }
+  </style>
+</head>
+<body>
+  <header><h1>Plumbing Job Helper</h1></header>
+
+  <main>
+    <div class="tabs">
+      <div class="tab active" data-view="jobs">Jobs</div>
+      <div class="tab" data-view="quickrefs">Quick-Refs</div>
+      <div class="tab" data-view="templates">Templates</div>
+      <div class="tab" data-view="about">About</div>
+    </div>
+
+    <!-- JOBS VIEW -->
+    <section id="view-jobs">
+      <div class="card">
+        <h2 style="margin:0 0 10px;">New Job</h2>
+        <div class="row">
+          <div class="col"><input id="custName" placeholder="Customer name" /></div>
+          <div class="col"><input id="address" placeholder="Address / location" /></div>
+        </div>
+        <div class="row">
+          <div class="col">
+            <select id="jobType">
+              <option value="Service Call">Service Call</option>
+              <option value="Water Heater">Water Heater</option>
+              <option value="Rough-In">Rough-In</option>
+              <option value="Sewer/Drain">Sewer/Drain</option>
+              <option value="Gas">Gas</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="col">
+            <select id="status">
+              <option value="open">Open</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+        </div>
+        <textarea id="jobNotes" placeholder="Notes (symptoms, plan, measurements, parts needed...)"></textarea>
+        <button id="addJobBtn">Add Job</button>
+        <div class="muted" style="margin-top:8px;">Saved locally on your phone (offline).</div>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div class="col"><input id="searchJobs" placeholder="Search jobs..." /></div>
+          <div class="col">
+            <select id="filterStatus">
+              <option value="all">All</option>
+              <option value="open">Open only</option>
+              <option value="done">Done only</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div id="jobList" class="list"></div>
+
+      <div id="jobDetail" class="card" style="display:none;">
+        <h2 id="jdTitle" style="margin:0 0 6px;"></h2>
+        <div class="muted" id="jdMeta"></div>
+        <div class="hr"></div>
+
+        <h3 style="margin:0 0 8px;">Notes</h3>
+        <textarea id="jdNotes"></textarea>
+        <div class="actions">
+          <button class="secondary" id="saveNotesBtn">Save Notes</button>
+          <button class="secondary" id="toggleStatusBtn">Toggle Open/Done</button>
+          <button class="danger" id="deleteJobBtn">Delete Job</button>
+        </div>
+
+        <div class="hr"></div>
+
+        <h3 style="margin:0 0 8px;">Materials</h3>
+        <div class="row">
+          <div class="col"><input id="matItem" placeholder="Item (e.g., 1/2&quot; ball valve)" /></div>
+          <div class="col"><input class="qty" id="matQty" type="number" min="1" value="1" /></div>
+        </div>
+        <div class="actions">
+          <button id="addMatBtn">Add Material</button>
+          <button class="secondary" id="copyMatsBtn">Copy List</button>
+        </div>
+        <div id="matList" class="list" style="margin-top:10px;"></div>
+
+        <div class="hr"></div>
+
+        <h3 style="margin:0 0 8px;">Estimate</h3>
+        <div class="row">
+          <div class="col"><input id="laborHours" type="number" min="0" step="0.25" placeholder="Labor hours" /></div>
+          <div class="col"><input id="laborRate" type="number" min="0" step="1" placeholder="Rate ($/hr)" /></div>
+        </div>
+        <div class="row">
+          <div class="col"><input id="materialsSubtotal" type="number" min="0" step="1" placeholder="Materials subtotal ($)" /></div>
+          <div class="col"><input id="markupPct" type="number" min="0" step="1" placeholder="Markup (%)" /></div>
+        </div>
+        <div class="row">
+          <div class="col"><input id="tripFee" type="number" min="0" step="1" placeholder="Trip/diagnostic fee ($)" /></div>
+          <div class="col"><input id="estimateTotal" placeholder="Total" readonly /></div>
+        </div>
+        <div class="actions">
+          <button class="secondary" id="calcBtn">Calculate</button>
+          <button class="secondary" id="copyEstimateBtn">Copy Estimate</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- QUICK REFS VIEW -->
+    <section id="view-quickrefs" style="display:none;">
+      <div class="card">
+        <h2 style="margin:0 0 10px;">Code Quick-Refs (Editable)</h2>
+        <div class="row">
+          <div class="col"><input id="qrTitle" placeholder="Title (e.g., Trap arm basics)" /></div>
+          <div class="col"><input id="qrTag" placeholder="Tag (e.g., vents, traps, gas)" /></div>
+        </div>
+        <textarea id="qrBody" placeholder="Your notes / code snippets / rules of thumb..."></textarea>
+        <button id="addQrBtn">Add Quick-Ref</button>
+      </div>
+
+      <div class="card">
+        <div class="row">
+          <div class="col"><input id="searchQr" placeholder="Search quick-refs..." /></div>
+        </div>
+      </div>
+
+      <div id="qrList" class="list"></div>
+    </section>
+
+    <!-- TEMPLATES VIEW -->
+    <section id="view-templates" style="display:none;">
+      <div class="card">
+        <h2 style="margin:0 0 10px;">Templates</h2>
+        <p class="small muted" style="margin-top:0;">
+          Tap one to load a starter materials list into the selected job.
+          (Open a job first, then come back here.)
+        </p>
+        <div class="actions">
+          <button class="secondary" data-template="wh40">40-gal Water Heater Swap</button>
+          <button class="secondary" data-template="toiletreset">Toilet Reset</button>
+          <button class="secondary" data-template="lavrough">Lav Rough-In</button>
+        </div>
+        <div class="muted" id="templateHint" style="margin-top:10px;"></div>
+      </div>
+    </section>
+
+    <!-- ABOUT VIEW -->
+    <section id="view-about" style="display:none;">
+      <div class="card">
+        <h2 style="margin:0 0 10px;">About</h2>
+        <p class="small">
+          This is a local/offline plumbing helper PWA. Your data stays on your phone unless you export/copy it.
+        </p>
+        <p class="small muted">
+          Next upgrades (v2): photo attachments, voice-to-text notes, PDF export, cloud sync, and your San Antonio quick-ref pack.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
